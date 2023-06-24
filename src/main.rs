@@ -1,21 +1,16 @@
-use std::{io, path};
+use std::{io, process};
 use clap::Parser;
-
-/// Cli app to upload files to ipfs storage provider
-#[derive(Parser, Debug)]
-struct Args {
-    /// ipfs storage provider api key
-    #[arg(short, long)]
-    api_key: String,
-
-    /// Path to file to be uploaded
-    #[arg(short, long)]
-    file_path: path::PathBuf,
-}
+use patter::Args;
 
 fn main() -> Result<(), io::Error> {
     let arg = Args::parse();
     dbg!(&arg);
+    if let Err(e) = patter::run(arg) {
+        println!("Application error {e}");
+        process::exit(1);
+    } else {
+        println!("Files backed up ✅ ✅  ");
+    }
     Ok(())
 }
 
