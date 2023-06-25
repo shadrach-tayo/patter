@@ -2,6 +2,8 @@ use std::{io, process};
 use clap::Parser;
 use patter::Args;
 
+//  cargo run -- --action pin_file --file-path ./cargo.toml --provider pinata
+
 fn main() -> Result<(), io::Error> {
     let arg = Args::parse();
     dbg!(&arg);
@@ -16,7 +18,6 @@ fn main() -> Result<(), io::Error> {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
 
     #[test]
     fn all_pass() {
