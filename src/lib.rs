@@ -26,7 +26,7 @@ pub struct Args {
 
     /// Path to file to be uploaded
     #[arg(short, long)]
-    pub file_path: PathBuf,
+    pub file_path: String,
 }
 
 /// Takes an arg of type Args and runs the app using the
@@ -38,7 +38,7 @@ pub struct Args {
 /// use std::path::PathBuf;
 /// let cwd = env::current_dir().unwrap();
 /// let path = String::from(cwd.to_string_lossy());
-/// let arg = patter::Args { file_path: PathBuf::from("./cargo.toml".to_string()), action: "pin_file".to_string(), provider: Some("pinata".to_string())};
+/// let arg = patter::Args { file_path: "./cargo.toml".to_string(), action: "pin_file".to_string(), provider: Some("pinata".to_string())};
 /// let result = patter::run(arg);
 /// assert_eq!(result, ());
 /// ```
@@ -67,7 +67,8 @@ pub async fn run(args: Args) -> Result<(), &'static str> {
         "pin_file" => {
             println!("pin files");
             let patter_api = PatterApi::new();
-            let result: Result<PinnedObject, ApiError> = patter_api.pin_file(PinByFile { providers, file_path: args.file_path }).await;
+
+            let result: Result<PinnedObject, ApiError> = patter_api.pin_file(PinByFile::new(args.file_path, providers ) ).await;
             println!("{:?}", result.unwrap());
         }
         _ => {
@@ -76,7 +77,7 @@ pub async fn run(args: Args) -> Result<(), &'static str> {
             ")
         }
     };
-
+    // println!("{}", args.file_path);
     Ok(())
 }
 

@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io;
+use std::{fs, io};
 
 use super::{utils};
 
@@ -87,16 +87,24 @@ impl StorageProvider for PinataProvider {
 }
 
 use std::{thread};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
+use reqwest::multipart::{Form, Part};
+use walkdir::WalkDir;
 
 use crate::api::data::PinnedObject;
 use crate::errors::ApiError;
 
 pub struct PinByFile {
-    pub file_path: PathBuf,
-    pub providers: Vec<Box<dyn StorageProvider + Send + Sync>>
+    pub(crate) files: Vec<String>,
+    pub(crate) providers: Vec<Box<dyn StorageProvider + Send + Sync>>
+}
+
+impl PinByFile {
+    pub fn new<S: Into<String>>(path: S, providers: Vec<Box<dyn StorageProvider + Send + Sync>>) -> Self {
+        PinByFile { files: vec![path.into()], providers }
+    }
 }
 
 pub struct PatterApi {}
@@ -106,7 +114,37 @@ impl PatterApi {
         PatterApi {}
     }
     pub async fn pin_file(&self, pin_data: PinByFile) -> Result<PinnedObject, ApiError> {
-        println!("File path {}, providers: {}", pin_data.file_path.to_str().unwrap_or(""), pin_data.providers.len());
+        let mut form = Form::new();
+        println!("File path {:?}, providers: {}", pin_data.files, pin_data.providers.len());
+
+        for file_data in pin_data.files {
+            let base_path = Path::new(&file_data);
+
+            if base_path.is_dir() {
+                // recursively read the directory
+                for entry_result in WalkDir::new(base_path) {
+                    let entry = entry_result?;
+                    let path = entry.path();
+
+                    // not interested in reading directory
+                    if path.is_dir() { continue }
+
+                    let path_name = path.strip_prefix(base_path)?;
+                    let part_file_name = format!("{}/{}", base_path.file_name().unwrap().to_str().unwrap(), path_name.to_str().unwrap());
+
+                    let part = Part::bytes(fs::read(path)?)
+                        .file_name(part_file_name);
+                    form = form.part("file", part);
+                }
+
+            } else {
+                let file_name = base_path.file_name().unwrap().to_str().unwrap();
+                let part = Part::bytes(fs::read(base_path)?);
+                form = form.part("file", part.file_name(String::from(file_name)));
+            }
+        }
+
+        dbg!(form);
 
         // todo: read file from disk and share in thread
         let mut handles = vec![];
