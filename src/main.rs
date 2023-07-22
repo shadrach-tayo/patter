@@ -20,7 +20,6 @@ async fn main() -> Result<(), io::Error> {
 
 #[cfg(test)]
 mod tests {
-
     #[test]
     fn all_pass() {
         assert_eq!(true, true);

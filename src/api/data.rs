@@ -7,3 +7,14 @@ pub struct PinnedObject {
     pub pin_size: u64,
     pub timestamp: String,
 }
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct PinByFile {
+    pub(crate) files: Vec<String>,
+}
+
+impl PinByFile {
+    pub fn new<S: Into<String>>(path: S) -> Self {
+        PinByFile { files: vec![path.into()] }
+    }
+}

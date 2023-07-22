@@ -1,8 +1,11 @@
-use std::io;
+use std::{fs, io};
+use std::path::Path;
+use async_trait::async_trait;
 use reqwest::{Client, ClientBuilder};
 use reqwest::header::HeaderMap;
-use reqwest::multipart::Form;
-use crate::api::data::PinnedObject;
+use reqwest::multipart::{Form, Part};
+use walkdir::WalkDir;
+use crate::api::data::{PinnedObject, PinByFile};
 use crate::data::StorageProvider;
 use crate::errors::{ApiError, Error};
 use crate::utils;
@@ -35,6 +38,7 @@ impl PinataProvider {
     }
 }
 
+#[async_trait]
 impl StorageProvider for PinataProvider {
     fn name(&self) -> String {
         "Pinata Provider".to_string()
@@ -62,24 +66,60 @@ impl StorageProvider for PinataProvider {
         "https://api.pinata.cloud/".to_string()
     }
 
-    #[allow(unused_variables)]
-    fn pin_file(&mut self, file: &Form) -> Result<PinnedObject, ApiError> {
+    async fn pin_file(&self, pin_data: PinByFile) -> Result<PinnedObject, ApiError> {
         println!("Pinning file to Pinata");
+        let mut form = Form::new();
+        println!("File path {:?}", pin_data.files);
+
+        for file_data in pin_data.files.iter() {
+            let base_path = Path::new(&file_data);
+
+            if base_path.is_dir() {
+                // recursively read the directory
+                for entry_result in WalkDir::new(base_path) {
+                    let entry = entry_result?;
+                    let path = entry.path();
+
+                    // not interested in reading directory
+                    if path.is_dir() { continue }
+
+                    let path_name = path.strip_prefix(base_path)?;
+                    let part_file_name = format!("{}/{}", base_path.file_name().unwrap().to_str().unwrap(), path_name.to_str().unwrap());
+
+                    let part = Part::bytes(fs::read(path)?)
+                        .file_name(part_file_name);
+                    form = form.part("file", part);
+                }
+
+            } else {
+                let file_name = base_path.file_name().unwrap().to_str().unwrap();
+                let part = Part::bytes(fs::read(base_path)?);
+                form = form.part("file", part.file_name(String::from(file_name)));
+            }
+        }
+        println!("Started Pinning file to provider {}......{:?}", &self.name(), &pin_data.files);
+
+        // let response = self.client.post(format!("{}{}", &self.api_url, "/pinning/pinFileToIPFS"))
+        //     .multipart(form)
+        //     .send()
+        //     .await?;
+
         Ok(PinnedObject { ipfs_hash: "".to_string(), pin_size: 5583924, timestamp: "9864773747".to_string() })
+
     }
 
     #[allow(unused_variables)]
-    fn pin_json(&mut self, file: &Form) -> Result<(), ApiError> {
+    async fn pin_json(&self) -> Result<(), ApiError> {
         todo!()
     }
 
     #[allow(unused_variables)]
-    fn pin_directory(&mut self, file: &Form) -> Result<(), ApiError> {
+    async fn pin_directory(&self) -> Result<(), ApiError> {
         todo!()
     }
 
     #[allow(unused_variables)]
-    fn unpin(&mut self, file: &Form) -> Result<(), ApiError> {
+    async fn unpin(&self) -> Result<(), ApiError> {
         todo!()
     }
 }

@@ -1,8 +1,9 @@
 use clap::{arg, Parser};
-use data::{StorageProvider,  PatterApi, PinByFile, SafeStorage};
+use data::{StorageProvider,  PatterApi, SafeStorage};
 use api::data::PinnedObject;
 use errors::*;
 use providers::pinata::{PinataProvider};
+use crate::data::PinFileData;
 
 mod utils;
 mod api;
@@ -66,8 +67,8 @@ pub async fn run(args: Args) -> Result<(), &'static str> {
             println!("pin files");
             let patter_api = PatterApi::new();
 
-            let result: Result<Vec<PinnedObject>, ApiError> = patter_api.pin_file(PinByFile::new(args.file_path, providers ) ).await;
-            println!("{:?}", result.unwrap());
+            let result: Result<Vec<PinnedObject>, ApiError> = patter_api.pin_file(PinFileData { files: vec![args.file_path], providers }).await;
+            println!("[patter_api.pin_file]:: {:?}", result.unwrap());
         }
         _ => {
             panic!("Specify what you want to do.\n \

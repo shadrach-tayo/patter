@@ -1,36 +1,34 @@
-use std::fs;
+use async_trait::async_trait;
+use std::{thread};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use crate::api::data::{PinByFile, PinnedObject};
+use crate::errors::ApiError;
 
 // todo: Implement first Ipfs provider to uploading files to ipfs and return cid and etc
+#[async_trait]
 pub trait StorageProvider {
     fn name(&self) -> String;
     fn init(&self) -> bool;
     fn api_url(&self) -> String;
-    fn pin_file(&mut self, file: &Form) -> Result<PinnedObject, ApiError>;
-    fn pin_json(&mut self, file: &Form) -> Result<(), ApiError>;
-    fn pin_directory(&mut self, file: &Form) -> Result<(), ApiError>;
-    fn unpin(&mut self, file: &Form) -> Result<(), ApiError>;
+    async fn pin_file(&self,  pin_data: PinByFile) -> Result<PinnedObject, ApiError>;
+    async fn pin_json(&self,) -> Result<(), ApiError>;
+    async fn pin_directory(&self) -> Result<(), ApiError>;
+    async fn unpin(&self) -> Result<(), ApiError>;
 }
-
-use std::{thread};
-use std::path::{Path};
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use reqwest::multipart::{Form, Part};
-use walkdir::WalkDir;
-
-use crate::api::data::PinnedObject;
-use crate::errors::ApiError;
 
 pub type SafeStorage = Box<dyn StorageProvider + Send + Sync>;
 
-pub struct PinByFile {
+pub struct PinFileData {
     pub(crate) files: Vec<String>,
     pub(crate) providers: Vec<SafeStorage>
 }
 
-impl PinByFile {
+impl PinFileData {
+    #[allow(unused)]
     pub fn new<S: Into<String>>(path: S, providers: Vec<SafeStorage>) -> Self {
-        PinByFile { files: vec![path.into()], providers }
+        PinFileData { files: vec![path.into()], providers }
     }
 }
 
@@ -40,58 +38,20 @@ impl PatterApi {
     pub fn new() -> Self {
         PatterApi {}
     }
-    pub async fn pin_file(&self, pin_data: PinByFile) -> Result<Vec<PinnedObject>, ApiError> {
-        let mut form = Form::new();
-        println!("File path {:?}, providers: {}", pin_data.files, pin_data.providers.len());
 
-        for file_data in pin_data.files {
-            let base_path = Path::new(&file_data);
-
-            if base_path.is_dir() {
-                // recursively read the directory
-                for entry_result in WalkDir::new(base_path) {
-                    let entry = entry_result?;
-                    let path = entry.path();
-
-                    // not interested in reading directory
-                    if path.is_dir() { continue }
-
-                    let path_name = path.strip_prefix(base_path)?;
-                    let part_file_name = format!("{}/{}", base_path.file_name().unwrap().to_str().unwrap(), path_name.to_str().unwrap());
-
-                    let part = Part::bytes(fs::read(path)?)
-                        .file_name(part_file_name);
-
-                    // let mut mut_form = form.lock().unwrap();
-                    // *mut_form = *mut_form.part("file", part);
-                    form = form.part("file", part);
-                }
-
-            } else {
-                let file_name = base_path.file_name().unwrap().to_str().unwrap();
-                let part = Part::bytes(fs::read(base_path)?);
-
-                // let mut mut_form = form.lock().unwrap();
-                // *mut_form = mut_form.part("file", part.file_name(String::from(file_name)));
-                form = form.part("file", part.file_name(String::from(file_name)));
-            }
-        }
-
+    pub async fn pin_file(&self, pin_data: PinFileData) -> Result<Vec<PinnedObject>, ApiError> {
         let mut handles = vec![];
-        let results: Arc<Mutex<Vec<PinnedObject>>> = Arc::new(Mutex::new(vec![]));
-        let shared_form = Arc::new(form);
 
+        let results: Arc<Mutex<Vec<PinnedObject>>> = Arc::new(Mutex::new(vec![]));
+        let files = Arc::new(pin_data.files);
         for provider in pin_data.providers {
             let results:  Arc<Mutex<Vec<PinnedObject>>>  = Arc::clone(&results);
-            println!("Started Pinning file to provider {}......{:?}", provider.name(), &shared_form);
-            let provider = Arc::new(Mutex::new(provider));
-            // let p = provider.clone();
-            let shared_form = Arc::clone(&shared_form);
-            let handle = thread::spawn(move || {
-                let mut provider = provider.lock().unwrap();
+            let provider = Arc::new(provider);
+            let files = Arc::clone(&files);
+            println!("Pinning file to provider {}", provider.name());
+            let handle = thread::spawn(move || async move {
                 thread::sleep(Duration::from_millis(1000));
-                println!("Pinning file to provider {}", provider.name());
-                let result = provider.pin_file(&shared_form);
+                let result = provider.pin_file(PinByFile { files: files.to_vec() }).await;
                 if let Ok(pinned_object) =  result {
                     println!("Pinned Result {:?} to provider {}", pinned_object, provider.name());
                     let mut r = results.lock().unwrap();
@@ -104,10 +64,29 @@ impl PatterApi {
             handles.push(handle);
         }
         for handle in handles {
-            handle.join().unwrap();
+            handle.join().unwrap().await;
         };
 
         let getter = results.lock().unwrap().to_vec();
         Ok(getter)
     }
 }
+
+// async fn run(provider: Arc<SafeStorage>,files: Arc<Vec<String>>) -> Result<PinnedObject, ApiError> {
+//     // let mut provider = provider.lock().unwrap();
+//     thread::sleep(Duration::from_millis(1000));
+//     println!("Pinning file to provider {}", provider.name());
+//     // let data = PinByFile { files: files.to_vec() };
+//     let result = provider.pin_file(PinByFile { files: files.to_vec() }).await;
+//     if let Ok(pinned_object) =  result {
+//         println!("Pinned Result {:?} to provider {}", pinned_object, provider.name());
+//         // let mut r = results.lock().unwrap();
+//         // r.push(pinned_object);
+//         // r
+//         Ok(pinned_object)
+//     } else {
+//         println!("Error Pinning file to provider {}", provider.name());
+//         println!("Error {:?}", result);
+//         result
+//     }
+// }
