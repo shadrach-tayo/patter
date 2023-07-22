@@ -1,16 +1,14 @@
 use clap::{arg, Parser};
-// use std::fs::File;
-use std::path::PathBuf;
+use data::{StorageProvider,  PatterApi, PinByFile, SafeStorage};
+use api::data::PinnedObject;
+use errors::*;
+use providers::pinata::{PinataProvider};
 
 mod utils;
 mod api;
 mod data;
 mod errors;
-
-use data::{StorageProvider, PinataProvider, PatterApi, PinByFile};
-use api::data::PinnedObject;
-
-use errors::ApiError;
+mod providers;
 
 #[allow(unused_variables)]
 
@@ -47,14 +45,14 @@ pub async fn run(args: Args) -> Result<(), &'static str> {
     let providers: Vec<Box<dyn StorageProvider + Send + Sync>> = if let Some(provider) = args.provider {
         match provider.as_str() {
             "pinata" => {
-                vec![Box::new(PinataProvider::new()) as Box<dyn StorageProvider + Send + Sync>]
+                vec![Box::new(PinataProvider::new().unwrap()) as SafeStorage]
             }
             _ => {
                 panic!("Unsupported provider");
             }
         }
     } else {
-        vec![Box::new(PinataProvider::new()) as Box<dyn StorageProvider + Send + Sync>]
+        vec![Box::new(PinataProvider::new().unwrap()) as SafeStorage]
     };
 
     let names = providers.iter().map(|p| p.name()).collect::<Vec<String>>();
@@ -68,7 +66,7 @@ pub async fn run(args: Args) -> Result<(), &'static str> {
             println!("pin files");
             let patter_api = PatterApi::new();
 
-            let result: Result<PinnedObject, ApiError> = patter_api.pin_file(PinByFile::new(args.file_path, providers ) ).await;
+            let result: Result<Vec<PinnedObject>, ApiError> = patter_api.pin_file(PinByFile::new(args.file_path, providers ) ).await;
             println!("{:?}", result.unwrap());
         }
         _ => {
@@ -77,7 +75,6 @@ pub async fn run(args: Args) -> Result<(), &'static str> {
             ")
         }
     };
-    // println!("{}", args.file_path);
     Ok(())
 }
 

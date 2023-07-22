@@ -1,94 +1,19 @@
-use std::fs::File;
-use std::{fs, io};
-
-use super::{utils};
+use std::fs;
 
 // todo: Implement first Ipfs provider to uploading files to ipfs and return cid and etc
 pub trait StorageProvider {
     fn name(&self) -> String;
     fn init(&self) -> bool;
     fn api_url(&self) -> String;
-    fn pin_file(&mut self, file: File) -> Result<(), io::Error>;
-    fn pin_json(&mut self, file: File) -> Result<(), io::Error>;
-    fn pin_directory(&mut self, file: File) -> Result<(), io::Error>;
-    fn unpin(&mut self, file: File) -> Result<(), io::Error>;
-}
-
-
-#[derive(Debug)]
-pub struct PinataProvider {
-    pub name: String,
-    pub api_url: String,
-    pub api_key: String,
-    pub secret_api_key: String,
-}
-
-impl PinataProvider {
-    pub fn new() -> PinataProvider {
-        let api_key = std::env::var("PINATA_API_KEY").expect("PINATA_API_KEY env required to run test");
-        let secret_api_key = std::env::var("SECRET_API_KEY").expect("SECRET_API_KEY env required to run test");
-
-        PinataProvider {
-            name: "Pinata Provider".to_string(),
-            api_url: "https://api.pinata.cloud/".to_string(),
-            api_key,
-            secret_api_key,
-        }
-    }
-}
-
-impl StorageProvider for PinataProvider {
-    fn name(&self) -> String {
-        "Pinata Provider".to_string()
-    }
-
-    fn init(&self) -> bool {
-        println!("Initializing Pinata");
-        let mut token: String = "".to_string();
-        println!("Enter your Pinata jwt key");
-
-        // todo: make this optional to skip uploading to pinata
-        io::stdin()
-            .read_line(&mut token)
-            .expect("Please enter your jwt api key");
-
-        // todo: read details from env
-        let token = utils::trim_newline(&mut token);
-        if token == String::from("") {
-            return false;
-        };
-        true
-    }
-
-    fn api_url(&self) -> String {
-        "https://api.pinata.cloud/".to_string()
-    }
-
-    #[allow(unused_variables)]
-    fn pin_file(&mut self, file: File) -> Result<(), io::Error> {
-        println!("Pinning file to Pinata");
-        Ok(())
-    }
-
-    #[allow(unused_variables)]
-    fn pin_json(&mut self, file: File) -> Result<(), io::Error> {
-        todo!()
-    }
-
-    #[allow(unused_variables)]
-    fn pin_directory(&mut self, file: File) -> Result<(), io::Error> {
-        todo!()
-    }
-
-    #[allow(unused_variables)]
-    fn unpin(&mut self, file: File) -> Result<(), io::Error> {
-        todo!()
-    }
+    fn pin_file(&mut self, file: &Form) -> Result<PinnedObject, ApiError>;
+    fn pin_json(&mut self, file: &Form) -> Result<(), ApiError>;
+    fn pin_directory(&mut self, file: &Form) -> Result<(), ApiError>;
+    fn unpin(&mut self, file: &Form) -> Result<(), ApiError>;
 }
 
 use std::{thread};
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::path::{Path};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use reqwest::multipart::{Form, Part};
 use walkdir::WalkDir;
@@ -96,13 +21,15 @@ use walkdir::WalkDir;
 use crate::api::data::PinnedObject;
 use crate::errors::ApiError;
 
+pub type SafeStorage = Box<dyn StorageProvider + Send + Sync>;
+
 pub struct PinByFile {
     pub(crate) files: Vec<String>,
-    pub(crate) providers: Vec<Box<dyn StorageProvider + Send + Sync>>
+    pub(crate) providers: Vec<SafeStorage>
 }
 
 impl PinByFile {
-    pub fn new<S: Into<String>>(path: S, providers: Vec<Box<dyn StorageProvider + Send + Sync>>) -> Self {
+    pub fn new<S: Into<String>>(path: S, providers: Vec<SafeStorage>) -> Self {
         PinByFile { files: vec![path.into()], providers }
     }
 }
@@ -113,7 +40,7 @@ impl PatterApi {
     pub fn new() -> Self {
         PatterApi {}
     }
-    pub async fn pin_file(&self, pin_data: PinByFile) -> Result<PinnedObject, ApiError> {
+    pub async fn pin_file(&self, pin_data: PinByFile) -> Result<Vec<PinnedObject>, ApiError> {
         let mut form = Form::new();
         println!("File path {:?}, providers: {}", pin_data.files, pin_data.providers.len());
 
@@ -134,27 +61,45 @@ impl PatterApi {
 
                     let part = Part::bytes(fs::read(path)?)
                         .file_name(part_file_name);
+
+                    // let mut mut_form = form.lock().unwrap();
+                    // *mut_form = *mut_form.part("file", part);
                     form = form.part("file", part);
                 }
 
             } else {
                 let file_name = base_path.file_name().unwrap().to_str().unwrap();
                 let part = Part::bytes(fs::read(base_path)?);
+
+                // let mut mut_form = form.lock().unwrap();
+                // *mut_form = mut_form.part("file", part.file_name(String::from(file_name)));
                 form = form.part("file", part.file_name(String::from(file_name)));
             }
         }
 
-        dbg!(form);
-
-        // todo: read file from disk and share in thread
         let mut handles = vec![];
+        let results: Arc<Mutex<Vec<PinnedObject>>> = Arc::new(Mutex::new(vec![]));
+        let shared_form = Arc::new(form);
+
         for provider in pin_data.providers {
-            let provider = Arc::new(provider);
-            let p = provider.clone();
+            let results:  Arc<Mutex<Vec<PinnedObject>>>  = Arc::clone(&results);
+            println!("Started Pinning file to provider {}......{:?}", provider.name(), &shared_form);
+            let provider = Arc::new(Mutex::new(provider));
+            // let p = provider.clone();
+            let shared_form = Arc::clone(&shared_form);
             let handle = thread::spawn(move || {
-                println!("Started Pinning file to provider {}......", p.name());
-                thread::sleep(Duration::from_millis(5000));
-                println!("Pinning file to provider {}", p.name());
+                let mut provider = provider.lock().unwrap();
+                thread::sleep(Duration::from_millis(1000));
+                println!("Pinning file to provider {}", provider.name());
+                let result = provider.pin_file(&shared_form);
+                if let Ok(pinned_object) =  result {
+                    println!("Pinned Result {:?} to provider {}", pinned_object, provider.name());
+                    let mut r = results.lock().unwrap();
+                    r.push(pinned_object);
+                } else {
+                    println!("Error Pinning file to provider {}", provider.name());
+                    println!("Error {:?}", result);
+                }
             });
             handles.push(handle);
         }
@@ -162,6 +107,7 @@ impl PatterApi {
             handle.join().unwrap();
         };
 
-        Ok(PinnedObject { ipfs_hash: "".to_string(), pin_size: 5583924, timestamp: "5834773747".to_string() })
+        let getter = results.lock().unwrap().to_vec();
+        Ok(getter)
     }
 }
