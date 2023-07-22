@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use std::{thread};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use crate::api::data::{PinByFile, PinnedObject};
 use crate::errors::ApiError;
@@ -48,9 +47,8 @@ impl PatterApi {
             let results:  Arc<Mutex<Vec<PinnedObject>>>  = Arc::clone(&results);
             let provider = Arc::new(provider);
             let files = Arc::clone(&files);
-            println!("Pinning file to provider {}", provider.name());
+            println!("Creating async thread for provider {}", provider.name());
             let handle = thread::spawn(move || async move {
-                thread::sleep(Duration::from_millis(1000));
                 let result = provider.pin_file(PinByFile { files: files.to_vec() }).await;
                 if let Ok(pinned_object) =  result {
                     println!("Pinned Result {:?} to provider {}", pinned_object, provider.name());
