@@ -3,7 +3,8 @@ use data::{StorageProvider,  PatterApi, SafeStorage};
 use api::data::PinnedObject;
 use errors::*;
 use providers::pinata::{PinataProvider};
-use crate::data::PinFileData;
+use crate::api::data::PinByHashResult;
+use crate::data::{PinFileData, PinHashData, PinJsonData};
 
 mod utils;
 mod api;
@@ -15,6 +16,7 @@ mod providers;
 
 /// Cli app to upload files to ipfs storage provider
 #[derive(Parser, Debug)]
+#[clap(author="Patter", about="A rust library for pinning data to ipfs")]
 pub struct Args {
     /// ipfs storage provider api key
     #[arg(short, long)]
@@ -25,7 +27,10 @@ pub struct Args {
 
     /// Path to file to be uploaded
     #[arg(short, long)]
-    pub file_path: String,
+    pub file_path: Option<String>,/// Path to file to be uploaded
+
+    #[arg(long)]
+    pub hash: Option<String>,
 }
 
 /// Takes an arg of type Args and runs the app using the
@@ -37,7 +42,7 @@ pub struct Args {
 /// use std::path::PathBuf;
 /// let cwd = env::current_dir().unwrap();
 /// let path = String::from(cwd.to_string_lossy());
-/// let arg = patter::Args { file_path: "./cargo.toml".to_string(), action: "pin_file".to_string(), provider: Some("pinata".to_string())};
+/// let arg = patter::Args { hash: None, file_path: Some("./cargo.toml".to_string()), action: "pin_file".to_string(), provider: Some("pinata".to_string())};
 /// let result = patter::run(arg);
 /// assert_eq!(result, ());
 /// ```
@@ -67,8 +72,22 @@ pub async fn run(args: Args) -> Result<(), &'static str> {
             println!("pin files");
             let patter_api = PatterApi::new();
 
-            let result: Result<Vec<PinnedObject>, ApiError> = patter_api.pin_file(PinFileData { files: vec![args.file_path], providers }).await;
+            let result: Result<Vec<PinnedObject>, ApiError> = patter_api.pin_file(PinFileData { files: vec![args.file_path.unwrap()], providers }).await;
             println!("[patter_api.pin_file]:: {:?}", result.unwrap());
+        }
+        "pin_json" => {
+            println!("pin json");
+            let patter_api = PatterApi::new();
+
+            let result: Result<Vec<PinnedObject>, ApiError> = patter_api.pin_json(PinJsonData { file: args.file_path.unwrap(), providers }).await;
+            println!("[patter_api.pin_json]:: {:?}", result.unwrap());
+        }
+        "pin_hash" => {
+            println!("....pin hash....");
+            let patter_api = PatterApi::new();
+
+            let result: Result<Vec<PinByHashResult>, ApiError> = patter_api.pin_by_hash(PinHashData { hash: args.hash.unwrap(), providers }).await;
+            println!("[patter_api.pin_hash]:: {:?}", result.unwrap());
         }
         _ => {
             panic!("Specify what you want to do.\n \

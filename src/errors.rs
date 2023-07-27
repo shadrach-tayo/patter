@@ -36,3 +36,9 @@ impl From<std::path::StripPrefixError> for ApiError {
         ApiError::GenericError(format!("{}", io_err))
     }
 }
+
+// impl FromResidual<Result<Infallible, serde_json::Error>> for ApiError {
+//     fn from(io_err: std::path::StripPrefixError) -> Self {
+//         ApiError::GenericError(format!("{}", io_err))
+//     }
+// }

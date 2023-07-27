@@ -6,7 +6,7 @@ use reqwest::header::HeaderMap;
 use reqwest::multipart::{Form, Part};
 use serde::de::DeserializeOwned;
 use walkdir::WalkDir;
-use crate::api::data::{PinnedObject, PinByFile};
+use crate::api::data::{PinnedObject, PinByFile, PinByJson, PinByHash, PinByHashResult};
 use crate::data::StorageProvider;
 use crate::errors::{ApiError, Error};
 use crate::utils;
@@ -131,12 +131,28 @@ impl StorageProvider for PinataProvider {
 
         self.parse_result(response).await
         // Ok(PinnedObject { ipfs_hash: "".to_string(), pin_size: 5583924, timestamp: "9864773747".to_string() })
-
     }
 
     #[allow(unused_variables)]
-    async fn pin_json(&self) -> Result<(), ApiError> {
-        todo!()
+    async fn pin_json(&self, pin_data: PinByJson) -> Result<PinnedObject, ApiError> {
+        let file = fs::read_to_string(pin_data.file)?;
+        let data:serde_json::Value = serde_json::from_str(file.as_str()).expect("Could not parse json file");
+        let response = self.client.post(format!("{}{}", &self.api_url, "/pinning/pinJSONToIPFS"))
+            .json(&data)
+            .send()
+            .await?;
+
+        self.parse_result(response).await
+    }
+
+ #[allow(unused_variables)]
+    async fn pin_by_hash(&self, pin_data: PinByHash) -> Result<PinByHashResult, ApiError> {
+        let response = self.client.post(format!("{}{}", &self.api_url, "/pinning/pinByHash"))
+            .json(&pin_data)
+            .send()
+            .await?;
+
+        self.parse_result(response).await
     }
 
     #[allow(unused_variables)]
