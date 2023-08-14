@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use std::{thread};
+use std::future::Future;
 use std::sync::{Arc, Mutex};
 
 use crate::api::data::{PinByFile, PinByHash, PinByHashResult, PinByJson, PinnedObject};
@@ -59,6 +60,7 @@ impl PatterApi {
             let provider = Arc::new(provider);
             let files = Arc::clone(&files);
             println!("Creating async thread for provider {}", provider.name());
+
             let handle = thread::spawn(move || async move {
                 let result = provider.pin_file(PinByFile { files: files.to_vec() }).await;
                 if let Ok(pinned_object) =  result {
@@ -92,13 +94,16 @@ impl PatterApi {
             println!("Creating async thread for provider {}", provider.name());
             let handle = thread::spawn(move || async move {
                 let result = provider.pin_json(PinByJson { file: file.to_string() }).await;
-                if let Ok(pinned_object) =  result {
-                    println!("Pinned Result {:?} to provider {}", pinned_object, provider.name());
-                    let mut r = results.lock().unwrap();
-                    r.push(pinned_object);
-                } else {
-                    println!("Error Pinning file to provider {}", provider.name());
-                    println!("Error {:?}", result);
+                match result {
+                    Ok(pinned_json) => {
+                        println!("Pinned Result {:?} to provider {}", pinned_json, provider.name());
+                        let mut r = results.lock().unwrap();
+                        r.push(pinned_json);
+                    }
+                    Err(..) => {
+                        println!("Error Pinning file to provider {}", provider.name());
+                        println!("Error {:?}", result);
+                    }
                 }
             });
             handles.push(handle);
@@ -123,10 +128,10 @@ impl PatterApi {
             println!("Pin hash: {}", &hash);
             let handle = thread::spawn(move || async move {
                 let result = provider.pin_by_hash(PinByHash { hash_to_pin: hash.to_string() }).await;
-                if let Ok(pinned_object) =  result {
-                    println!("Pinned Result {:?} to provider {}", pinned_object, provider.name());
+                if let Ok(pinned_hash) =  result {
+                    println!("Pinned Result {:?} to provider {}", pinned_hash, provider.name());
                     let mut r = results.lock().unwrap();
-                    r.push(pinned_object);
+                    r.push(pinned_hash);
                 } else {
                     println!("Error Pinning hash to {}", provider.name());
                     println!("Error {:?}", result);
@@ -142,22 +147,3 @@ impl PatterApi {
         Ok(getter)
     }
 }
-
-// async fn run(provider: Arc<SafeStorage>,files: Arc<Vec<String>>) -> Result<PinnedObject, ApiError> {
-//     // let mut provider = provider.lock().unwrap();
-//     thread::sleep(Duration::from_millis(1000));
-//     println!("Pinning file to provider {}", provider.name());
-//     // let data = PinByFile { files: files.to_vec() };
-//     let result = provider.pin_file(PinByFile { files: files.to_vec() }).await;
-//     if let Ok(pinned_object) =  result {
-//         println!("Pinned Result {:?} to provider {}", pinned_object, provider.name());
-//         // let mut r = results.lock().unwrap();
-//         // r.push(pinned_object);
-//         // r
-//         Ok(pinned_object)
-//     } else {
-//         println!("Error Pinning file to provider {}", provider.name());
-//         println!("Error {:?}", result);
-//         result
-//     }
-// }
