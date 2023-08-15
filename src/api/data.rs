@@ -33,6 +33,13 @@ pub struct PinnedObject {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+// #[serde(rename_all = "PascalCase")]
+pub struct PinnedResult {
+    pub cid: String,
+    pub carCid: String
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct PinByFile {
     pub(crate) files: Vec<String>,
 }

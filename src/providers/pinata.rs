@@ -1,16 +1,15 @@
 use std::{fs, io};
-use std::path::Path;
 use async_trait::async_trait;
 use reqwest::{Client, ClientBuilder, Response};
 use reqwest::header::HeaderMap;
 use reqwest::multipart::{Form, Part};
 use serde::de::DeserializeOwned;
-use walkdir::WalkDir;
 use crate::api::data::{PinnedObject, PinByFile, PinByJson, PinByHash, PinByHashResult};
 use crate::data::StorageProvider;
 use crate::errors::{ApiError, Error};
 use crate::utils;
 use serde::Deserialize;
+use crate::utils::transform_file_to_form;
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct PinataApiError {
@@ -93,37 +92,8 @@ impl StorageProvider for PinataProvider {
     }
 
     async fn pin_file(&self, pin_data: PinByFile) -> Result<PinnedObject, ApiError> {
-        println!("Pinning file to Pinata");
-        let mut form = Form::new();
-        println!("File path {:?}", pin_data.files);
+        let form = transform_file_to_form(&pin_data)?; // Form::new();
 
-        for file_data in pin_data.files.iter() {
-            let base_path = Path::new(&file_data);
-
-            if base_path.is_dir() {
-                // recursively read the directory
-                for entry_result in WalkDir::new(base_path) {
-                    let entry = entry_result?;
-                    let path = entry.path();
-
-                    // not interested in reading directory
-                    if path.is_dir() { continue }
-
-                    let path_name = path.strip_prefix(base_path)?;
-                    let part_file_name = format!("{}/{}", base_path.file_name().unwrap().to_str().unwrap(), path_name.to_str().unwrap());
-
-                    let part = Part::bytes(fs::read(path)?)
-                        .file_name(part_file_name);
-                    form = form.part("file", part);
-                }
-
-            } else {
-                let file_name = base_path.file_name().unwrap().to_str().unwrap();
-                let part = Part::bytes(fs::read(base_path)?);
-                form = form.part("file", part.file_name(String::from(file_name)));
-            }
-        }
-        println!("Started Pinning file to provider {}......{:?}", &self.name(), &pin_data.files);
         let response = self.client.post(format!("{}{}", &self.api_url, "/pinning/pinFileToIPFS"))
             .multipart(form)
             .send()

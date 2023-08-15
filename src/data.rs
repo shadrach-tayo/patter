@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 use std::{thread};
+use std::fmt::Debug;
 use std::future::Future;
 use std::sync::{Arc, Mutex};
+use serde::de::DeserializeOwned;
 
 use crate::api::data::{PinByFile, PinByHash, PinByHashResult, PinByJson, PinnedObject};
 use crate::errors::ApiError;

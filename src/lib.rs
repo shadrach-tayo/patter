@@ -1,10 +1,13 @@
+use std::fmt::Debug;
 use clap::{arg, Parser};
+use serde::de::DeserializeOwned;
 use data::{StorageProvider,  PatterApi, SafeStorage};
 use api::data::PinnedObject;
 use errors::*;
 use providers::pinata::{PinataProvider};
 use crate::api::data::PinByHashResult;
 use crate::data::{PinFileData, PinHashData, PinJsonData};
+use crate::providers::web3Storage::Web3StorageProvider;
 
 mod utils;
 mod api;
@@ -53,12 +56,15 @@ pub async fn run(args: Args) -> Result<(), &'static str> {
             "pinata" => {
                 vec![Box::new(PinataProvider::new().unwrap()) as SafeStorage]
             }
+            "web3" => {
+                vec![Box::new(Web3StorageProvider::new().unwrap()) as SafeStorage]
+            }
             _ => {
                 panic!("Unsupported provider");
             }
         }
     } else {
-        vec![Box::new(PinataProvider::new().unwrap()) as SafeStorage]
+        vec![Box::new(PinataProvider::new().unwrap()) as SafeStorage, Box::new(Web3StorageProvider::new().unwrap()) as SafeStorage]
     };
 
     let names = providers.iter().map(|p| p.name()).collect::<Vec<String>>();
