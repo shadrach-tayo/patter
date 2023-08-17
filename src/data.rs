@@ -5,7 +5,7 @@ use std::future::Future;
 use std::sync::{Arc, Mutex};
 use serde::de::DeserializeOwned;
 
-use crate::api::data::{PinByFile, PinByHash, PinByHashResult, PinByJson, PinnedObject};
+use crate::api::data::{PinByFile, PinByHash, PinByHashResult, PinByJson, PinnedObject, UnPin};
 use crate::errors::ApiError;
 
 // todo: Implement first Ipfs provider to uploading files to ipfs and return cid and etc
@@ -18,7 +18,7 @@ pub trait StorageProvider {
     async fn pin_json(&self, pin_data: PinByJson) -> Result<PinnedObject, ApiError>;
     async fn pin_by_hash(&self, pin_data: PinByHash) -> Result<PinByHashResult, ApiError>;
     async fn pin_directory(&self) -> Result<(), ApiError>;
-    async fn unpin(&self) -> Result<(), ApiError>;
+    async fn unpin(&self, options: UnPin) -> Result<(), ApiError>;
 }
 
 pub type SafeStorage = Box<dyn StorageProvider + Send + Sync>;
@@ -147,5 +147,36 @@ impl PatterApi {
 
         let getter = results.lock().unwrap().to_vec();
         Ok(getter)
+    }
+
+    pub async fn unpin(&self, pin_data: PinHashData) -> Result<(), ApiError> {
+        let mut handles = vec![];
+
+        // let results: Arc<Mutex<Vec<PinByHashResult>>> = Arc::new(Mutex::new(vec![]));
+        let hash = Arc::new(pin_data.hash);
+        for provider in pin_data.providers {
+            // let results:  Arc<Mutex<Vec<PinByHashResult>>>  = Arc::clone(&results);
+            let provider = Arc::new(provider);
+            let hash = Arc::clone(&hash);
+            println!("Unpin Cid: {}", &hash);
+            let handle = thread::spawn(move || async move {
+                let result = provider.unpin(UnPin { cid: hash.to_string() }).await;
+                if let Ok(_) =  result {
+                    println!("UnPinned Result to provider {}", provider.name());
+                    // let mut r = results.lock().unwrap();
+                    // r.push(pinned_hash);
+                } else {
+                    println!("Error Removing hash from {}", provider.name());
+                    println!("Error {:?}", result);
+                }
+            });
+            handles.push(handle);
+        }
+        for handle in handles {
+            handle.join().unwrap().await;
+        };
+
+        // let getter = results.lock().unwrap().to_vec();
+        Ok(())
     }
 }

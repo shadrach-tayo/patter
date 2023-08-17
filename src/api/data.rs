@@ -61,6 +61,12 @@ pub struct PinByHash {
     pub(crate) hash_to_pin: String,
 }
 
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UnPin {
+    pub(crate) cid: String,
+}
+
 // impl PinByJson {
 //     pub fn new<S: Into<String>>(path: S) -> Self {
 //         PinByJson { file: path.into() }
@@ -75,3 +81,4 @@ pub struct PinByHashResult {
     pub status: JobStatus,
     pub name: Option<String>,
 }
+

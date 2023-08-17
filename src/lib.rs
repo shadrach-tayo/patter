@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 use clap::{arg, Parser};
-use serde::de::DeserializeOwned;
 use data::{StorageProvider,  PatterApi, SafeStorage};
 use api::data::PinnedObject;
 use errors::*;
@@ -94,6 +93,13 @@ pub async fn run(args: Args) -> Result<(), &'static str> {
 
             let result: Result<Vec<PinByHashResult>, ApiError> = patter_api.pin_by_hash(PinHashData { hash: args.hash.unwrap(), providers }).await;
             println!("[patter_api.pin_hash]:: {:?}", result.unwrap());
+        }
+        "unpin" => {
+            println!("....removing cid....");
+            let patter_api = PatterApi::new();
+
+            let result: Result<(), ApiError> = patter_api.unpin(PinHashData { hash: args.hash.unwrap(), providers }).await;
+            println!("[patter_api.unpin]:: {:?}", result.unwrap());
         }
         _ => {
             panic!("Specify what you want to do.\n \

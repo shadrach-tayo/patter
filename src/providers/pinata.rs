@@ -4,7 +4,7 @@ use reqwest::{Client, ClientBuilder, Response};
 use reqwest::header::HeaderMap;
 use reqwest::multipart::{Form, Part};
 use serde::de::DeserializeOwned;
-use crate::api::data::{PinnedObject, PinByFile, PinByJson, PinByHash, PinByHashResult};
+use crate::api::data::{PinnedObject, PinByFile, PinByJson, PinByHash, PinByHashResult, UnPin};
 use crate::data::StorageProvider;
 use crate::errors::{ApiError, Error};
 use crate::utils;
@@ -131,7 +131,17 @@ impl StorageProvider for PinataProvider {
     }
 
     #[allow(unused_variables)]
-    async fn unpin(&self) -> Result<(), ApiError> {
-        todo!()
+    async fn unpin(&self, param: UnPin) -> Result<(), ApiError> {
+        let response = self.client.delete(format!("{}{}{}", &self.api_url, "/pinning/unpin/", &param.cid))
+            .send()
+            .await?;
+
+        let is_success = response.status().is_success();
+        println!("UnPin result {:?}", is_success);
+        if is_success {
+             Ok(())
+        } else {
+            Err(ApiError::GenericError("Error unpinning cid from Pinata".to_string()))
+        }
     }
 }
