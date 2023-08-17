@@ -1,9 +1,10 @@
+use std::fs;
 use async_trait::async_trait;
 use reqwest::{Client, ClientBuilder, Response};
 use reqwest::header::{HeaderMap};
 use serde::de::DeserializeOwned;
 use serde_derive::Deserialize;
-use crate::api::data::{PinByFile, PinByHash, PinByHashResult, PinByJson, PinnedObject, PinnedResult};
+use crate::api::data::{JobStatus, PinByFile, PinByHash, PinByHashResult, PinByJson, PinnedObject, PinnedResult};
 use crate::data::StorageProvider;
 use crate::errors::{Error, ApiError};
 use crate::utils::transform_file_to_form;
@@ -86,11 +87,29 @@ impl StorageProvider for Web3StorageProvider {
     }
 
     async fn pin_json(&self, pin_data: PinByJson) -> Result<PinnedObject, ApiError> {
-        todo!()
+        let file = fs::read_to_string(pin_data.file)?;
+        let data:serde_json::Value = serde_json::from_str(file.as_str()).expect("Could not parse json file");
+        let response = self.client.post(format!("{}{}", &self.api_url, "/upload"))
+            .json(&data)
+            .send()
+            .await?;
+
+        let res = self.parse_result::<PinnedResult>(response).await?;
+        println!("[Web3StorageProvider::PinJson] {:?}", res);
+        Ok(PinnedObject { ipfs_hash: res.cid, timestamp: "".to_string(), pin_size: 0 })
     }
 
     async fn pin_by_hash(&self, pin_data: PinByHash) -> Result<PinByHashResult, ApiError> {
+        // let response = self.client.post(format!("{}{}", &self.api_url, "/upload"))
+        //     .json(&pin_data)
+        //     .send()
+        //     .await?;
+        //
+        // let res = self.parse_result::<PinnedResult>(response).await?;
+        // println!("[Web3StorageProvider::Pin hash] {:?}", res);
+        // Ok(PinByHashResult { ipfs_hash: res.cid, status: JobStatus::Prechecking })
         todo!()
+        // self.parse_result(response).await
     }
 
     async fn pin_directory(&self) -> Result<(), ApiError> {
