@@ -53,17 +53,17 @@ pub async fn run(args: Args) -> Result<(), &'static str> {
     let providers: Vec<Box<dyn StorageProvider + Send + Sync>> = if let Some(provider) = args.provider {
         match provider.as_str() {
             "pinata" => {
-                vec![Box::new(PinataProvider::new().unwrap()) as SafeStorage]
+                vec![Box::new(PinataProvider::new(None, None).unwrap()) as SafeStorage]
             }
             "web3" => {
-                vec![Box::new(Web3StorageProvider::new().unwrap()) as SafeStorage]
+                vec![Box::new(Web3StorageProvider::new(None).unwrap()) as SafeStorage]
             }
             _ => {
                 panic!("Unsupported provider");
             }
         }
     } else {
-        vec![Box::new(PinataProvider::new().unwrap()) as SafeStorage, Box::new(Web3StorageProvider::new().unwrap()) as SafeStorage]
+        vec![Box::new(PinataProvider::new(None, None).unwrap()) as SafeStorage, Box::new(Web3StorageProvider::new(None).unwrap()) as SafeStorage]
     };
 
     let names = providers.iter().map(|p| p.name()).collect::<Vec<String>>();
@@ -110,3 +110,5 @@ pub async fn run(args: Args) -> Result<(), &'static str> {
     Ok(())
 }
 
+#[cfg(test)]
+mod tests;

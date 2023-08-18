@@ -29,11 +29,11 @@ pub struct Web3StorageProvider {
 }
 
 impl Web3StorageProvider {
-    pub fn new() -> Result<Web3StorageProvider, Error> {
-        let api_token = std::env::var("WEB3STORAGE_API_TOKEN").expect("PINATA_API_KEY env required to run test");
-
+    pub fn new(token: Option<String>) -> Result<Web3StorageProvider, Error> {
+        // let api_token = std::env::var("WEB3STORAGE_API_TOKEN").expect("PINATA_API_KEY env required to run test");
+        let token = if let Some(token) = token { token } else { std::env::var("WEB3STORAGE_API_TOKEN").expect("WEB3STORAGE_API_TOKEN env required to run test") };
         let mut  default_headers = HeaderMap::new();
-        default_headers.insert("Authorization", format!("Bearer {}", api_token).parse().unwrap());
+        default_headers.insert("Authorization", format!("Bearer {}", token).parse().unwrap());
 
         let client = ClientBuilder::new()
             .default_headers(default_headers)

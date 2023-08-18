@@ -30,9 +30,10 @@ pub struct PinataProvider {
 }
 
 impl PinataProvider {
-    pub fn new() -> Result<PinataProvider, Error> {
-        let api_key = std::env::var("PINATA_API_KEY").expect("PINATA_API_KEY env required to run test");
-        let secret_api_key = std::env::var("PINATA_SECRET_API_KEY").expect("SECRET_API_KEY env required to run test");
+    pub fn new(api_key: Option<String>, secret_api_key: Option<String>) -> Result<PinataProvider, Error> {
+        let api_key = if let Some(api_key) = api_key { api_key } else { std::env::var("PINATA_API_KEY").expect("PINATA_API_KEY env required to run test") };
+        let secret_api_key = if let Some(secret_api_key) = secret_api_key { secret_api_key } else { std::env::var("PINATA_SECRET_API_KEY").expect("SECRET_API_KEY env required to run test") };
+        // let secret_api_key = std::env::var("PINATA_SECRET_API_KEY").expect("SECRET_API_KEY env required to run test");
 
         let mut  default_headers = HeaderMap::new();
         default_headers.insert("pinata_api_key", api_key.parse().unwrap());
@@ -55,6 +56,17 @@ impl PinataProvider {
         if response.status().is_success() {
             let result = response.json::<R>().await?;
             Ok(result)
+        } else {
+            let error = response.json::<PinataApiError>().await?;
+            println!("Error {:?}", error);
+            Err(ApiError::GenericError(error.message()))
+        }
+    }
+
+    async fn parse_ok_result(&self, response: Response) -> Result<(), ApiError>
+    {
+        if response.status().is_success() {
+            Ok(())
         } else {
             let error = response.json::<PinataApiError>().await?;
             println!("Error {:?}", error);
@@ -136,12 +148,9 @@ impl StorageProvider for PinataProvider {
             .send()
             .await?;
 
-        let is_success = response.status().is_success();
-        println!("UnPin result {:?}", is_success);
-        if is_success {
-             Ok(())
-        } else {
-            Err(ApiError::GenericError("Error unpinning cid from Pinata".to_string()))
-        }
+        self.parse_ok_result(response).await
     }
 }
+
+// #[cfg(test)]
+// mod tests;
