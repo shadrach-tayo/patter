@@ -2,3 +2,4 @@
 .idea
 .env
 test.json
+config.toml

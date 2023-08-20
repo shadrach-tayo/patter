@@ -44,9 +44,11 @@ pub struct Args {
 /// use std::path::PathBuf;
 /// let cwd = env::current_dir().unwrap();
 /// let path = String::from(cwd.to_string_lossy());
-/// let arg = patter::Args { hash: None, file_path: Some("./cargo.toml".to_string()), action: "pin_file".to_string(), provider: Some("pinata".to_string())};
-/// let result = patter::run(arg);
-/// assert_eq!(result, ());
+/// # tokio_test::block_on(async {
+///     let arg = patter::Args { hash: None, file_path: Some("./cargo.toml".to_string()), action: "pin_file".to_string(), provider: Some("pinata".to_string())};
+///     let result = patter::run(arg).await.unwrap();
+///     assert_eq!(result, ());
+/// # })
 /// ```
 pub async fn run(args: Args) -> Result<(), &'static str> {
 

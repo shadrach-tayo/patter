@@ -3,10 +3,12 @@ use crate::api::data::{PinByHash};
 use crate::data::{PatterApi, PinFileData, PinJsonData, SafeStorage, StorageProvider};
 use crate::providers::pinata::PinataProvider;
 use crate::providers::web3Storage::Web3StorageProvider;
+use super::*;
 
 fn get_pinata_provider() -> PinataProvider {
     let api_key = std::env::var("PINATA_API_KEY").expect("PINATA_API_KEY env required to run test");
     let secret_api_key = std::env::var("PINATA_SECRET_API_KEY").expect("PINATA_SECRET_API_KEY env required to run test");
+    println!("{} {}", &api_key, &secret_api_key);
     PinataProvider::new(Some(api_key), Some(secret_api_key)).unwrap()
 }
 
@@ -38,9 +40,9 @@ async fn test_pin_file() {
         Ok(pinned_data) => {
             debug!("{:?}", pinned_data);
             let pinata_result = &pinned_data[0];
-            assert_eq!(pinata_result.ipfs_hash, "QmZL9mRcrPh3ocSvMciK7e2WkWqjtDqR9ik1CrcuMAwNe4".to_string());
+            assert_eq!(pinata_result.ipfs_hash, "QmY1EeoCFn2CrsVzua9YRD8dFWxx6KoCgmwqBmgoPqN9Z8".to_string());
             let web3_result = &pinned_data[1];
-            assert_eq!(web3_result.ipfs_hash, "bafkreife6pglf6o47tkom7jch4gwksdfxo6ijpdi7etkdvjf23wvay5sny".to_string());
+            assert_eq!(web3_result.ipfs_hash, "bafkreicahcav4xtr35hwmbmy67olar3kcowivfkls3sf7zh7vzxc4oprom".to_string());
         }
         Err(e) => assert!(false, "{}", e),
     }
