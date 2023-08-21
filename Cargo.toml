@@ -19,3 +19,7 @@ log = "0.4.14"
 derive_builder = "0.12.0"
 async-trait = "0.1.72"
 tokio-test = "0.4.2"
+
+[dev-dependencies]
+assert_cmd = "2.0.12"
+predicates = "3.0.3"

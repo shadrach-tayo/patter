@@ -3,6 +3,22 @@ use crate::api::data::{PinByHash};
 use crate::data::{PatterApi, PinFileData, PinJsonData, SafeStorage, StorageProvider};
 use crate::providers::pinata::PinataProvider;
 use crate::providers::web3Storage::Web3StorageProvider;
+use assert_cmd::prelude::*;
+use predicates::prelude::*;
+use std::process::Command;
+
+#[tokio::test]
+async fn run_patter() -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::cargo_bin("patter")?;
+    cmd.arg("acion").arg("pin_file");
+    cmd.arg("file_path").arg("./test.json");
+    cmd.arg("provider").arg("web3");
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("error"));
+    println!("[RUN PATTER]");
+    Ok(())
+}
 
 fn get_pinata_provider() -> PinataProvider {
     let api_key = std::env::var("PINATA_API_KEY").expect("PINATA_API_KEY env required to run test");
@@ -33,15 +49,15 @@ async fn test_pin_by_hash() {
 async fn test_pin_file() {
     let patter_api = PatterApi::new();
     let providers = vec![Box::new(get_pinata_provider()) as SafeStorage, Box::new(get_web3_provider()) as SafeStorage];
-    let result = patter_api.pin_file(PinFileData { files: vec!["./cargo.toml".to_string()], providers }).await;
+    let result = patter_api.pin_file(PinFileData { files: vec!["./LICENSE".to_string()], providers }).await;
 
     match result {
         Ok(pinned_data) => {
             debug!("{:?}", pinned_data);
             let pinata_result = &pinned_data[0];
-            assert_eq!(pinata_result.ipfs_hash, "QmY1EeoCFn2CrsVzua9YRD8dFWxx6KoCgmwqBmgoPqN9Z8".to_string());
+            assert_eq!(pinata_result.ipfs_hash, "QmT5zMbasLqSDw4MnbZPmgWnnhGpf7BNs32keMYeL7vrhP".to_string());
             let web3_result = &pinned_data[1];
-            assert_eq!(web3_result.ipfs_hash, "bafkreicahcav4xtr35hwmbmy67olar3kcowivfkls3sf7zh7vzxc4oprom".to_string());
+            assert_eq!(web3_result.ipfs_hash, "bafkreigoyk5mbk347djnhxixlbzxj5e5xssf2v5iwzttr26bhuz7ymo6ie".to_string());
         }
         Err(e) => assert!(false, "{}", e),
     }
