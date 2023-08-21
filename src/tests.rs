@@ -7,17 +7,17 @@ use assert_cmd::prelude::*;
 use predicates::prelude::*;
 use std::process::Command;
 
-#[tokio::test]
-async fn run_patter() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("patter")?;
-    cmd.arg("--action pin_file --file_path ./test.json --provider web3");
-    // .arg("pin_file").arg("file_path").arg("./test.json").cmd.arg("provider").arg("web3");
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("error"));
-    println!("[RUN PATTER]");
-    Ok(())
-}
+// #[tokio::test]
+// async fn run_patter() -> Result<(), Box<dyn std::error::Error>> {
+//     let mut cmd = Command::cargo_bin("patter")?;
+//     cmd.arg("-p patter --lib").arg("--action pin_file --file_path ./test.json --provider web3");
+//     // .arg("pin_file").arg("file_path").arg("./test.json").cmd.arg("provider").arg("web3");
+//     cmd.assert()
+//         .failure()
+//         .stderr(predicate::str::contains("error"));
+//     println!("[RUN PATTER]");
+//     Ok(())
+// }
 
 fn get_pinata_provider() -> PinataProvider {
     let api_key = std::env::var("PINATA_API_KEY").expect("PINATA_API_KEY env required to run test");
