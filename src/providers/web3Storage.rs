@@ -4,7 +4,7 @@ use reqwest::{Client, ClientBuilder, Response};
 use reqwest::header::{HeaderMap};
 use serde::de::DeserializeOwned;
 use serde_derive::Deserialize;
-use crate::api::data::{JobStatus, PinByFile, PinByHash, PinByHashResult, PinByJson, PinnedObject, PinnedResult, UnPin};
+use crate::api::data::{PinByFile, PinByHash, PinByHashResult, PinByJson, PinnedObject, PinnedResult, UnPin};
 use crate::data::StorageProvider;
 use crate::errors::{Error, ApiError};
 use crate::utils::transform_file_to_form;

@@ -2,7 +2,7 @@ use std::{fs, io};
 use async_trait::async_trait;
 use reqwest::{Client, ClientBuilder, Response};
 use reqwest::header::HeaderMap;
-use reqwest::multipart::{Form, Part};
+
 use serde::de::DeserializeOwned;
 use crate::api::data::{PinnedObject, PinByFile, PinByJson, PinByHash, PinByHashResult, UnPin};
 use crate::data::StorageProvider;
