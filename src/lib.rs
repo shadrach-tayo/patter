@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 use clap::{arg, Parser};
-use data::{StorageProvider,  PatterApi, SafeStorage};
+pub use data::{StorageProvider,  PatterApi, SafeStorage};
 use api::data::PinnedObject;
 use errors::*;
-use providers::pinata::{PinataProvider};
+use providers::pinata::PinataProvider;
 use crate::api::data::PinByHashResult;
 use crate::data::{PinFileData, PinHashData, PinJsonData};
 use crate::providers::web3Storage::Web3StorageProvider;
@@ -31,6 +31,7 @@ pub struct Args {
     #[arg(short, long)]
     pub file_path: Option<String>,/// Path to file to be uploaded
 
+    /// hash to be pinned
     #[arg(long)]
     pub hash: Option<String>,
 }
@@ -50,8 +51,8 @@ pub struct Args {
 ///     assert_eq!(result, ());
 /// # })
 /// ```
-pub async fn run(args: Args) -> Result<(), &'static str> {
 
+pub async fn run(args: Args) -> Result<(), &'static str> {
     let providers: Vec<Box<dyn StorageProvider + Send + Sync>> = if let Some(provider) = args.provider {
         match provider.as_str() {
             "pinata" => {

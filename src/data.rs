@@ -1,9 +1,6 @@
 use async_trait::async_trait;
 use std::{thread};
-use std::fmt::Debug;
-use std::future::Future;
 use std::sync::{Arc, Mutex};
-use serde::de::DeserializeOwned;
 
 use crate::api::data::{PinByFile, PinByHash, PinByHashResult, PinByJson, PinnedObject, UnPin};
 use crate::errors::ApiError;
@@ -152,10 +149,8 @@ impl PatterApi {
     pub async fn unpin(&self, pin_data: PinHashData) -> Result<(), ApiError> {
         let mut handles = vec![];
 
-        // let results: Arc<Mutex<Vec<PinByHashResult>>> = Arc::new(Mutex::new(vec![]));
         let hash = Arc::new(pin_data.hash);
         for provider in pin_data.providers {
-            // let results:  Arc<Mutex<Vec<PinByHashResult>>>  = Arc::clone(&results);
             let provider = Arc::new(provider);
             let hash = Arc::clone(&hash);
             println!("Unpin Cid: {}", &hash);
@@ -163,8 +158,6 @@ impl PatterApi {
                 let result = provider.unpin(UnPin { cid: hash.to_string() }).await;
                 if let Ok(_) =  result {
                     println!("UnPinned Result to provider {}", provider.name());
-                    // let mut r = results.lock().unwrap();
-                    // r.push(pinned_hash);
                 } else {
                     println!("Error Removing hash from {}", provider.name());
                     println!("Error {:?}", result);
@@ -176,7 +169,6 @@ impl PatterApi {
             handle.join().unwrap().await;
         };
 
-        // let getter = results.lock().unwrap().to_vec();
         Ok(())
     }
 }

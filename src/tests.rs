@@ -3,7 +3,6 @@ use crate::api::data::{PinByHash};
 use crate::data::{PatterApi, PinFileData, PinJsonData, SafeStorage, StorageProvider};
 use crate::providers::pinata::PinataProvider;
 use crate::providers::web3Storage::Web3StorageProvider;
-use super::*;
 
 fn get_pinata_provider() -> PinataProvider {
     let api_key = std::env::var("PINATA_API_KEY").expect("PINATA_API_KEY env required to run test");
