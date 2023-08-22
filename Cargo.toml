@@ -2,6 +2,7 @@
 name = "patter"
 version = "0.1.0"
 edition = "2021"
+description = "A lightweight rust library for uploading data to decentralized web3 storage providers like Pinata and Web3.Storage"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

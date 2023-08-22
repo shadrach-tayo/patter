@@ -4,3 +4,4 @@
 test.json
 config.toml
 .cargo
+.DS_Store

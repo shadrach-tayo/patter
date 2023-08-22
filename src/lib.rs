@@ -3,16 +3,15 @@ use clap::{arg, Parser};
 pub use data::{StorageProvider,  PatterApi, SafeStorage};
 use api::data::PinnedObject;
 use errors::*;
-use providers::pinata::PinataProvider;
+pub use providers::{web3_storage::Web3StorageProvider, pinata::PinataProvider};
 use crate::api::data::PinByHashResult;
 use crate::data::{PinFileData, PinHashData, PinJsonData};
-use crate::providers::web3Storage::Web3StorageProvider;
 
 mod utils;
 mod api;
 mod data;
 mod errors;
-mod providers;
+pub mod providers;
 
 #[allow(unused_variables)]
 
