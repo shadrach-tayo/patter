@@ -1,6 +1,6 @@
 [package]
 name = "patter"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 description = "A lightweight rust library for uploading data to decentralized web3 storage providers like Pinata and Web3.Storage"
 
